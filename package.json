@@ -1,0 +1,5 @@
+{
+  "name": "surprise",
+  "private": true,
+  "description": "Static site + Vercel /api/vote (Supabase REST, no npm deps)"
+}

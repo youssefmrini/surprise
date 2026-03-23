@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scroll</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&family=Nunito:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <canvas id="confetti" class="confetti" aria-hidden="true"></canvas>
+
+    <div
+      id="s0z"
+      class="ws0"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="ws0__card">
+        <p class="ws0__title">Hold on…</p>
+        <p class="ws0__sub">Checking whether you’re onto us</p>
+        <div class="ws0__bar" aria-hidden="true">
+          <span class="ws0__fill"></span>
+        </div>
+        <p class="ws0__dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </p>
+      </div>
+    </div>
+
+    <main class="story">
+      <section class="panel panel--1" aria-label="Welcome">
+        <div class="panel__inner">
+          <div class="soft-orbs soft-orbs--1" aria-hidden="true"></div>
+          <p class="eyebrow">Hey — it’s us</p>
+          <h1>We put this together<br />for you</h1>
+          <p class="lede">
+            No forms, no tricks. Just scroll when you have a minute. There’s
+            a real update at the bottom, but we’re not spelling it out until
+            you get there.
+          </p>
+          <div class="scroll-hint scroll-hint--alive" aria-hidden="true">
+            <span>Keep going</span>
+            <span class="scroll-hint__chev">↓</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-memory panel-memory--1" aria-label="A favourite view">
+        <figure class="memory-card">
+          <div class="memory-card__shine" aria-hidden="true"></div>
+          <img
+            class="memory-card__img"
+            src="assets/memory-bryce.png"
+            alt="Couple smiling at a scenic canyon overlook with hoodoos and blue sky"
+            width="900"
+            height="1200"
+            loading="lazy"
+          />
+        </figure>
+        <p class="memory-card__cap">
+          Bryce, sun in our eyes, wind in our hair. Days like this are the
+          ones we keep talking about in the car ride home.
+        </p>
+      </section>
+
+      <section class="panel panel--2" aria-label="Hint one">
+        <div class="panel__inner">
+          <div class="blob blob--mint"></div>
+          <h2>So… something shifted</h2>
+          <p>
+            If you’ve seen us lately, we might look “normal.” But there’s been
+            a quiet thing going on in the background—good nerves, big smiles,
+            a lot of “can you believe it?” looks between us.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel panel-memory panel-memory--2" aria-label="River hike">
+        <figure class="memory-card">
+          <div class="memory-card__shine" aria-hidden="true"></div>
+          <img
+            class="memory-card__img"
+            src="assets/memory-narrows.png"
+            alt="Couple smiling during a sunny hike in a narrow canyon with a river"
+            width="900"
+            height="1200"
+            loading="lazy"
+          />
+        </figure>
+        <p class="memory-card__cap">
+          Cold water, tired legs, stupid grins. This trip reminded us we like
+          the messy, real parts of life—not just the pretty photos.
+        </p>
+      </section>
+
+      <section class="panel panel--3" aria-label="Hint two">
+        <div class="panel__inner">
+          <div class="stars" aria-hidden="true"></div>
+          <h2>Okay, one more nudge</h2>
+          <p>
+            It’s not a new job. It’s not a new apartment. It’s the kind of news
+            that makes you re-read the test, then laugh, then call your person
+            and cry a little (in a good way).
+          </p>
+        </div>
+      </section>
+
+      <section class="panel panel-memory panel-memory--3" aria-label="Slot canyon">
+        <figure class="memory-card">
+          <div class="memory-card__shine" aria-hidden="true"></div>
+          <img
+            class="memory-card__img"
+            src="assets/memory-antelope.png"
+            alt="Couple taking a happy selfie in a red sandstone slot canyon"
+            width="900"
+            height="1200"
+            loading="lazy"
+          />
+        </figure>
+        <p class="memory-card__cap">
+          Antelope Canyon energy: loud colours, tight spaces, and us trying not
+          to blink at the wrong second. Life’s been a bit like that lately—full,
+          bright, a little surreal.
+        </p>
+      </section>
+
+      <section class="panel panel-memory panel-memory--4" aria-label="Dressed up">
+        <figure class="memory-card">
+          <div class="memory-card__shine" aria-hidden="true"></div>
+          <img
+            class="memory-card__img"
+            src="assets/memory-dressed-up.png"
+            alt="Two people dressed up, smiling indoors"
+            width="900"
+            height="1200"
+            loading="lazy"
+          />
+        </figure>
+        <p class="memory-card__cap">
+          A rare night where we actually ironed things. Felt like a good
+          bookmark: us, dressed up, happy, about to step into something new.
+        </p>
+      </section>
+
+      <section class="panel panel--4 panel--tension" aria-label="Almost there">
+        <div class="panel__inner">
+          <div class="soft-orbs soft-orbs--2" aria-hidden="true"></div>
+          <p class="tension-tag" aria-hidden="true">No skipping ahead</p>
+          <h2>Almost</h2>
+          <p>
+            Okay. Deep breath. Next screen is a single question—get it right and
+            the whole thing unlocks. Get it wrong and we’ll nudge you (gently).
+          </p>
+          <p class="whisper">Promise it’s worth it.</p>
+        </div>
+      </section>
+
+      <section
+        class="panel panel--reveal"
+        id="reveal"
+        aria-label="Next section"
+      >
+        <div class="reveal__content">
+          <div id="q0z" class="wg0">
+            <div class="glass-card">
+              <p class="eyebrow eyebrow--on-glass">Last stop</p>
+              <div class="wlk0" aria-hidden="true">
+                <span class="wlk0__icon">🔐</span>
+                <span class="wlk0__text">Locked story below</span>
+              </div>
+              <h2 class="wg0__title">What do you think we’re about to say?</h2>
+              <p class="wg0__lede">
+                Say it in your own words. Close enough = the lock opens. Way off =
+                try again (we’ll drop a hint).
+              </p>
+              <form id="f0z" class="wf0" novalidate>
+                <label class="sr-only" for="e0z">Your expectation</label>
+                <textarea
+                  id="e0z"
+                  name="e0"
+                  rows="3"
+                  maxlength="280"
+                  placeholder="Your guess"
+                  autocomplete="off"
+                ></textarea>
+                <button type="submit" class="btn btn--primary">
+                  Okay, show me
+                </button>
+              </form>
+              <p id="b0z" class="wf1" role="status" hidden></p>
+            </div>
+          </div>
+
+          <div id="r0z" class="rs0" hidden>
+            <p class="eyebrow eyebrow--dark rs0__eyebrow">
+              Yep — that’s the one
+            </p>
+            <h2 class="reveal__title">
+              <span class="reveal__line" id="v0t"></span>
+              <span class="reveal__sub" id="v0s"></span>
+            </h2>
+
+            <figure class="photo-frame" id="p0z">
+              <img
+                src="assets/couple.png"
+                alt=""
+                width="900"
+                height="1200"
+                loading="lazy"
+              />
+            </figure>
+
+            <div class="countdown-card">
+              <h3>Countdown</h3>
+              <p class="countdown-card__note">
+                We’re counting down to the day we find out together (and yes,
+                we’re nervous-excited in the most chaotic way).
+              </p>
+              <div
+                class="countdown"
+                id="c0z"
+                role="timer"
+                aria-live="polite"
+              >
+                <div class="countdown__unit">
+                  <span class="countdown__num" data-q="d">—</span>
+                  <span class="countdown__label">days</span>
+                </div>
+                <div class="countdown__unit">
+                  <span class="countdown__num" data-q="h">—</span>
+                  <span class="countdown__label">hours</span>
+                </div>
+                <div class="countdown__unit">
+                  <span class="countdown__num" data-q="m">—</span>
+                  <span class="countdown__label">minutes</span>
+                </div>
+                <div class="countdown__unit">
+                  <span class="countdown__num" data-q="s">—</span>
+                  <span class="countdown__label">seconds</span>
+                </div>
+              </div>
+              <p class="countdown-card__date" id="d0z"></p>
+              <div class="cdx">
+                <a
+                  href="k4m9w.html"
+                  class="btn buv buv-x"
+                  id="u0z"
+                  aria-disabled="true"
+                  tabindex="-1"
+                  >Unveil</a
+                >
+                <p id="w0z" class="cdx-h">
+                  Unlocks when this countdown reaches zero.
+                </p>
+              </div>
+            </div>
+
+            <div class="poll glass-card glass-card--poll" id="v0z">
+              <h3 class="poll__title">Pick a side (for fun)</h3>
+              <p class="poll__note">
+                Add your name, then pick a team. After you deploy, every vote
+                hits the same live tally (local preview uses offline counts until
+                the API is up).
+              </p>
+              <p id="a0z" class="poll-status" role="status"></p>
+              <div class="poll__name-block">
+                <label class="poll__name-label" for="n0z"
+                  >Your name</label
+                >
+                <input
+                  type="text"
+                  id="n0z"
+                  class="poll__name-input"
+                  name="n0"
+                  maxlength="60"
+                  autocomplete="given-name"
+                  placeholder="First name is perfect"
+                />
+              </div>
+              <p id="h0z" class="poll-name-hint" hidden>
+                Pop your name in first — then choose team pink or blue.
+              </p>
+              <div class="poll__actions">
+                <button
+                  type="button"
+                  class="poll-card pc0"
+                  data-p="0"
+                  aria-pressed="false"
+                >
+                  <span class="poll-card__emoji" aria-hidden="true">💗</span>
+                  <span class="poll-card__label">Team pink</span>
+                  <span class="poll-card__hint">Girl</span>
+                </button>
+                <button
+                  type="button"
+                  class="poll-card pc1"
+                  data-p="1"
+                  aria-pressed="false"
+                >
+                  <span class="poll-card__emoji" aria-hidden="true">💙</span>
+                  <span class="poll-card__label">Team blue</span>
+                  <span class="poll-card__hint">Boy</span>
+                </button>
+              </div>
+              <div class="poll__results" id="poll-results" aria-live="polite">
+                <div class="poll__row">
+                  <span class="poll__row-label">Girl</span>
+                  <div class="poll__track">
+                    <div
+                      class="poll__fill pf0"
+                      id="j0a"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                  <span class="poll__pct" id="t0a">0%</span>
+                </div>
+                <div class="poll__row">
+                  <span class="poll__row-label">Boy</span>
+                  <div class="poll__track">
+                    <div
+                      class="poll__fill pf1"
+                      id="j0b"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                  <span class="poll__pct" id="t0b">0%</span>
+                </div>
+                <p class="poll__you" id="y0z"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
