@@ -63,6 +63,32 @@ function send(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
+/** Vercel may set req.body as object, string, or Buffer depending on runtime. */
+function parseJsonBody(req) {
+  var body = req.body;
+  if (body == null || body === "") {
+    return {};
+  }
+  if (Buffer.isBuffer(body)) {
+    try {
+      return JSON.parse(body.toString("utf8") || "{}");
+    } catch (e) {
+      return {};
+    }
+  }
+  if (typeof body === "string") {
+    try {
+      return JSON.parse(body || "{}");
+    } catch (e) {
+      return {};
+    }
+  }
+  if (typeof body === "object") {
+    return body;
+  }
+  return {};
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -91,14 +117,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      var body = req.body;
-      if (typeof body === "string") {
-        try {
-          body = JSON.parse(body || "{}");
-        } catch (e) {
-          body = {};
-        }
-      }
+      var body = parseJsonBody(req);
       var name = String((body && body.display_name) || "")
         .trim()
         .slice(0, 80);

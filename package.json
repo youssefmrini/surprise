@@ -1,5 +1,8 @@
 {
   "name": "surprise",
   "private": true,
-  "description": "Static site + Vercel /api/vote (Supabase REST, no npm deps)"
+  "description": "Static site + Vercel /api/vote (Supabase REST, no npm deps)",
+  "engines": {
+    "node": ">=20"
+  }
 }
