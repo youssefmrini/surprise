@@ -200,23 +200,33 @@
               </div>
               <h2 class="wg0__title">What do you think we’re about to announce?</h2>
               <p class="wg0__lede">
-                It’s about <strong>Jihane</strong>. Type what you think the news is
-                in your own words — close enough opens everything below: the full
-                announcement, photos, countdown, and a vote for friends (you’ll see).
-                Way off? Try again (we’ll drop a hint).
+                <span class="wg0__lede-lead"
+                  >It’s about <strong class="wg0__name">Jihane</strong>.</span
+                >
+                Type what you think the news is in your own words — close enough
+                opens everything below: the full announcement, photos, countdown,
+                and a vote for friends (you’ll see). Way off? Try again (we’ll drop
+                a hint).
               </p>
-              <form id="f0z" class="wf0" novalidate>
+              <form id="f0z" class="wf0 quiz-form" novalidate>
                 <label class="sr-only" for="e0z">Your expectation</label>
-                <textarea
-                  id="e0z"
-                  name="e0"
-                  rows="3"
-                  maxlength="280"
-                  placeholder="Your guess about the news…"
-                  autocomplete="off"
-                ></textarea>
-                <button type="submit" class="btn btn--primary">
-                  Okay, show me
+                <div class="wf0__field">
+                  <textarea
+                    id="e0z"
+                    name="e0"
+                    class="wf0__input"
+                    rows="4"
+                    maxlength="280"
+                    placeholder="Your guess about the news…"
+                    autocomplete="off"
+                  ></textarea>
+                  <span class="wf0__hint" aria-hidden="true"
+                    >Up to 280 characters</span
+                  >
+                </div>
+                <button type="submit" class="btn btn--primary wf0__submit">
+                  <span class="wf0__submit-text">Okay, show me</span>
+                  <span class="wf0__submit-arrow" aria-hidden="true">→</span>
                 </button>
               </form>
               <p id="b0z" class="wf1" role="status" hidden></p>
