@@ -395,7 +395,7 @@
         if (statusEl) {
           statusEl.className = "poll-status poll-status--warn";
           statusEl.textContent =
-            "No live scoreboard here — run `vercel dev` or deploy to Vercel with Supabase env vars.";
+            "No live scoreboard here — run `vercel dev` or deploy to Vercel with Firebase env vars.";
         }
         applyVoteLockState(ui);
         syncYouMessage(ui);

@@ -1,8 +1,11 @@
 {
   "name": "surprise",
   "private": true,
-  "description": "Static site + Vercel /api/vote (Supabase REST, no npm deps)",
+  "description": "Static site + Vercel /api/vote backed by Cloud Firestore",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
   }
 }
