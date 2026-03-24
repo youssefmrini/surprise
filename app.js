@@ -801,4 +801,21 @@
     },
     { passive: true }
   );
+
+  (function setupAmbientVideo() {
+    var v = document.querySelector(".ambient__video");
+    if (!v) return;
+    try {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        v.removeAttribute("autoplay");
+        v.pause();
+        return;
+      }
+      v.play().catch(function () {
+        /* Autoplay blocked: WebP poster still shows */
+      });
+    } catch (e1) {
+      /* ignore */
+    }
+  })();
 })();

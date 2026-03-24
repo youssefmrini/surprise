@@ -5,7 +5,10 @@
     <!-- If the page is not served from Vercel, point the poll at your API:
     <meta name="vote-api" content="https://YOUR_PROJECT.vercel.app/api/vote" />
     -->
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Scroll</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,6 +19,22 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="ambient" aria-hidden="true">
+      <!-- Peaceful loop: WebM + MP4 (web-standard video). Poster is WebP. -->
+      <video
+        class="ambient__video"
+        autoplay
+        muted
+        loop
+        playsinline
+        poster="assets/ambient-poster.webp"
+        preload="metadata"
+      >
+        <source src="assets/peaceful-ambient.webm" type="video/webm" />
+        <source src="assets/peaceful-ambient.mp4" type="video/mp4" />
+      </video>
+      <div class="ambient__scrim"></div>
+    </div>
     <div class="grain" aria-hidden="true"></div>
     <canvas id="confetti" class="confetti" aria-hidden="true"></canvas>
 
