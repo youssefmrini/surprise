@@ -34,10 +34,38 @@
     if (lx) lx.textContent = dec(B[4]);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", fill);
-  } else {
+  /** Full circle of 👏 for 5s, then fade out (unveil moment). */
+  function startApplauseRing() {
+    var host = document.getElementById("applauseRing");
+    if (!host || host.childElementCount > 0) return;
+    var n = 16;
+    var i;
+    for (i = 0; i < n; i++) {
+      var slot = document.createElement("span");
+      slot.className = "applause-ring__slot";
+      slot.setAttribute("aria-hidden", "true");
+      slot.style.setProperty("--a", (360 / n) * i + "deg");
+      slot.style.setProperty("--i", String(i));
+      slot.textContent = "\uD83D\uDC4F";
+      host.appendChild(slot);
+    }
+    window.setTimeout(function () {
+      host.classList.add("applause-ring--out");
+    }, 5000);
+    window.setTimeout(function () {
+      host.setAttribute("hidden", "");
+    }, 5800);
+  }
+
+  function boot() {
     fill();
+    startApplauseRing();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
   }
 
   var canvas = document.getElementById("fx");

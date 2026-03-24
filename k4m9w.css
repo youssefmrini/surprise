@@ -124,6 +124,53 @@ body {
   pointer-events: none;
 }
 
+/* Full ring of applause — visible 5s on load, then fades (see k4m9w.js) */
+.applause-ring {
+  --applause-r: min(40vw, 210px);
+  position: fixed;
+  left: 50%;
+  top: 42%;
+  width: 0;
+  height: 0;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.75s ease;
+}
+
+.applause-ring.applause-ring--out {
+  opacity: 0;
+}
+
+.applause-ring__slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: clamp(1.35rem, 4.5vw, 2.25rem);
+  line-height: 1;
+  transform: rotate(var(--a, 0deg))
+    translateY(calc(-1 * var(--applause-r)));
+  filter: drop-shadow(0 0 10px rgba(255, 200, 180, 0.55));
+  animation: applaudClap 0.34s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.035s);
+}
+
+@keyframes applaudClap {
+  0%,
+  100% {
+    transform: rotate(var(--a, 0deg))
+      translateY(calc(-1 * var(--applause-r))) scale(1);
+  }
+  45% {
+    transform: rotate(var(--a, 0deg))
+      translateY(calc(-1 * var(--applause-r))) scale(1.2);
+  }
+  70% {
+    transform: rotate(var(--a, 0deg))
+      translateY(calc(-1 * var(--applause-r))) scale(0.92);
+  }
+}
+
 .hearts {
   position: fixed;
   inset: 0;
@@ -406,8 +453,15 @@ body {
   .ring,
   .hearts span,
   .h0b,
-  .h0a {
+  .h0a,
+  .applause-ring__slot {
     animation: none !important;
+  }
+
+  .applause-ring__slot {
+    opacity: 0.65;
+    transform: rotate(var(--a, 0deg))
+      translateY(calc(-1 * var(--applause-r))) scale(1) !important;
   }
 
   .h0a,
