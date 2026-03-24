@@ -1,8 +1,22 @@
 (function () {
   "use strict";
 
-  /* Party countdown + when the Unveil button activates (same moment). */
-  var TARGET = new Date(2026, 4, 23, 15, 0, 0);
+  /* Countdown + Unveil: same moment — last Saturday of April, 3:00 PM local. */
+  function lastSaturdayOfAprilAt(year, hour, minute) {
+    var d = new Date(year, 3, 30, hour, minute, 0, 0);
+    while (d.getDay() !== 6) {
+      d.setDate(d.getDate() - 1);
+    }
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  }
+  var _y = new Date().getFullYear();
+  var TARGET = lastSaturdayOfAprilAt(_y, 15, 0);
+  while (TARGET.getTime() <= Date.now()) {
+    _y += 1;
+    TARGET = lastSaturdayOfAprilAt(_y, 15, 0);
+    if (_y > new Date().getFullYear() + 8) break;
+  }
   var POLL_KEY = "jihaneGenderPollCounts";
   var VOTE_KEY = "jihaneGenderMyVote";
   var SESSION_UNLOCK = "jihaneRevealOk";
