@@ -7,7 +7,14 @@
   var VOTE_KEY = "jihaneGenderMyVote";
   var SESSION_UNLOCK = "jihaneRevealOk";
   var VOTE_BANNER_KEY = "jihaneVoteBanner";
-  var API_VOTE = "/api/vote";
+  var voteMeta =
+    typeof document !== "undefined" &&
+    document.querySelector('meta[name="vote-api"]');
+  var voteApiRaw = voteMeta && voteMeta.getAttribute("content");
+  var API_VOTE =
+    voteApiRaw && String(voteApiRaw).trim()
+      ? String(voteApiRaw).trim().replace(/\/$/, "")
+      : "/api/vote";
   var pollUiRef = null;
   var unveilClickGuardBound = false;
 
@@ -364,55 +371,105 @@
     if (ui.nameInput) ui.nameInput.readOnly = locked;
   }
 
+  function fetchVoteApi(method, jsonBody) {
+    var init = { method: method || "GET", headers: {} };
+    if (jsonBody != null) {
+      init.headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(jsonBody);
+    }
+    return fetch(API_VOTE, init)
+      .then(function (r) {
+        return r.text().then(function (text) {
+          var data = null;
+          if (text) {
+            try {
+              data = JSON.parse(text);
+            } catch (e) {
+              data = null;
+            }
+          }
+          return {
+            ok: r.ok,
+            status: r.status,
+            data: data,
+            raw: text,
+          };
+        });
+      })
+      .catch(function () {
+        return { ok: false, status: 0, data: null, raw: "", networkError: true };
+      });
+  }
+
+  function scoreboardOfflineHint(res) {
+    if (location.protocol === "file:") {
+      return "Open this site with a dev server: run npx vercel dev (add .env.local — see .env.example), then use the URL it prints.";
+    }
+    if (res && res.networkError) {
+      return "Can’t reach " + API_VOTE + ". If the HTML is not on Vercel, add <meta name=\"vote-api\" content=\"https://YOUR_PROJECT.vercel.app/api/vote\"> in index.html.";
+    }
+    if (res && res.status === 503 && res.data && res.data.error) {
+      var er = String(res.data.error);
+      if (er.indexOf("SUPABASE") !== -1) {
+        return "Vercel needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (Project → Settings → Environment Variables), then redeploy.";
+      }
+      return "Vote API unavailable (" + er.slice(0, 120) + ").";
+    }
+    if (res && res.status === 404) {
+      return "No vote API at this address. Deploy this repo to Vercel or set meta vote-api to your deployment’s /api/vote URL.";
+    }
+    if (res && res.status) {
+      return "Vote API error (HTTP " + res.status + "). Check Vercel logs and that public.votes exists (supabase/schema.sql).";
+    }
+    return "No live scoreboard — use npx vercel dev with Supabase in .env.local, or fix Vercel env vars and redeploy.";
+  }
+
   function refreshPollTotals() {
     if (!pollUiRef) return;
     var ui = pollUiRef;
     var statusEl = document.getElementById("a0z");
 
-    fetch(API_VOTE)
-      .then(function (r) {
-        if (!r.ok) throw new Error("bad status");
-        return r.json();
-      })
-      .then(function (data) {
-        renderBars(ui, { girl: data.girl, boy: data.boy });
+    fetchVoteApi("GET").then(function (res) {
+      if (
+        res.ok &&
+        res.data &&
+        typeof res.data.girl === "number" &&
+        typeof res.data.boy === "number"
+      ) {
+        renderBars(ui, { girl: res.data.girl, boy: res.data.boy });
         if (statusEl) {
           statusEl.className = "poll-status poll-status--ok";
           statusEl.textContent =
-            data.total > 0
+            res.data.total > 0
               ? "Live tally — " +
-                data.total +
+                res.data.total +
                 " vote" +
-                (data.total === 1 ? "" : "s") +
+                (res.data.total === 1 ? "" : "s") +
                 " so far"
               : "Live tally — be the first to vote";
         }
         applyVoteLockState(ui);
         syncYouMessage(ui);
-      })
-      .catch(function () {
-        renderBars(ui, getPollCounts());
-        if (statusEl) {
-          statusEl.className = "poll-status poll-status--warn";
-          statusEl.textContent =
-            "No live scoreboard here — run `vercel dev` or deploy to Vercel with Supabase env vars.";
-        }
-        applyVoteLockState(ui);
-        syncYouMessage(ui);
-      });
+        return;
+      }
+      renderBars(ui, getPollCounts());
+      if (statusEl) {
+        statusEl.className = "poll-status poll-status--warn";
+        statusEl.textContent = res.ok
+          ? "Vote API returned an unexpected response (expected girl/boy counts)."
+          : scoreboardOfflineHint(res);
+      }
+      applyVoteLockState(ui);
+      syncYouMessage(ui);
+    });
   }
 
   function postVote(name, vote) {
-    return fetch(API_VOTE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: name,
-        gender: vote,
-      }),
-    }).then(function (r) {
-      if (!r.ok) throw new Error("post failed");
-      return r.json();
+    return fetchVoteApi("POST", { name: name, gender: vote }).then(function (
+      res
+    ) {
+      if (res.ok && res.data) return res.data;
+      return Promise.reject(res);
     });
   }
 
@@ -594,7 +651,7 @@
                 " so far";
             }
           })
-          .catch(function () {
+          .catch(function (err) {
             var counts = getPollCounts();
             counts[choice] += 1;
             savePollCounts(counts);
@@ -607,8 +664,18 @@
             var st = document.getElementById("a0z");
             if (st) {
               st.className = "poll-status poll-status--warn";
+              var extra = "";
+              if (
+                err &&
+                err.status === 503 &&
+                err.data &&
+                String(err.data.error || "").indexOf("SUPABASE") !== -1
+              ) {
+                extra = " Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY on Vercel.";
+              }
               st.textContent =
-                "Couldn’t reach the server — saved on this device only. Deploy the API for a shared tally.";
+                "Couldn’t reach the server — vote saved on this device only." +
+                extra;
             }
           });
       });
