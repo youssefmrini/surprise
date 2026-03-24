@@ -708,15 +708,25 @@
             if (st) {
               st.className = "poll-status poll-status--warn";
               var extra = "";
-              if (
-                revealDebugOn() &&
+              if (revealDebugOn() && err && err.data) {
+                if (err.data.detail) {
+                  extra = " " + String(err.data.detail).slice(0, 220);
+                } else if (err.data.error) {
+                  extra = " " + String(err.data.error).slice(0, 160);
+                }
+              } else if (
                 err &&
                 err.status === 503 &&
                 err.data &&
                 String(err.data.error || "").indexOf("SUPABASE") !== -1
               ) {
                 extra =
-                  " (Host: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in Vercel, then redeploy.)";
+                  " Host: set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY on Vercel, redeploy.";
+              } else if (err && err.status === 502) {
+                extra =
+                  " Host: Supabase table public.votes must have columns name + gender (run supabase/schema.sql).";
+              } else if (err && err.status === 400) {
+                extra = " Try again, or open with ?debug=1 for details.";
               }
               st.textContent =
                 "Couldn’t sync your vote — saved on this device only." + extra;

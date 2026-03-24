@@ -99,6 +99,31 @@ function parseJsonBody(req) {
   return {};
 }
 
+/** Fallback when body parser left req.body empty (some Vercel / POST combos). */
+function readStreamJson(req) {
+  return new Promise(function (resolve) {
+    if (!req || typeof req.on !== "function") {
+      resolve({});
+      return;
+    }
+    var chunks = [];
+    req.on("data", function (c) {
+      chunks.push(c);
+    });
+    req.on("end", function () {
+      try {
+        var raw = Buffer.concat(chunks).toString("utf8");
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch (e) {
+        resolve({});
+      }
+    });
+    req.on("error", function () {
+      resolve({});
+    });
+  });
+}
+
 function readNameAndGender(body) {
   var name =
     (body && body.name) != null
@@ -145,13 +170,29 @@ module.exports = async function handler(req, res) {
       var body = parseJsonBody(req);
       var parsed = readNameAndGender(body);
       if (!parsed.name || !parsed.gender) {
+        body = await readStreamJson(req);
+        parsed = readNameAndGender(body);
+      }
+      if (!parsed.name || !parsed.gender) {
         return send(res, 400, {
           error:
             "Need name (1–80 chars) and gender: boy or girl (also accepts display_name + gender_vote for older clients)",
         });
       }
 
-      await insertVote(supabaseUrl, serviceKey, parsed.name, parsed.gender);
+      try {
+        await insertVote(supabaseUrl, serviceKey, parsed.name, parsed.gender);
+      } catch (insErr) {
+        console.error(insErr);
+        var detail = String(insErr && insErr.message ? insErr.message : insErr).slice(
+          0,
+          400
+        );
+        return send(res, 502, {
+          error: "Database write failed — check Supabase table public.votes (columns name, gender).",
+          detail: detail,
+        });
+      }
       var c2 = await getCounts(supabaseUrl, serviceKey);
       return send(res, 201, c2);
     }
@@ -159,6 +200,7 @@ module.exports = async function handler(req, res) {
     return send(res, 405, { error: "Method not allowed" });
   } catch (err) {
     console.error(err);
-    return send(res, 500, { error: "Something went wrong" });
+    var outer = String(err && err.message ? err.message : err).slice(0, 400);
+    return send(res, 500, { error: "Something went wrong", detail: outer });
   }
 };
