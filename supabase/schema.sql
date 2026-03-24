@@ -1,5 +1,5 @@
--- Legacy: the live site uses Cloud Firestore via /api/vote (Firebase Admin on Vercel).
--- Keep this file only if you still want a Supabase-backed copy of the same schema.
+-- Supabase → SQL Editor → paste and Run once per project.
+-- Vercel: add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or use Vercel’s Supabase integration).
 
 create table if not exists public.gender_predictions (
   id uuid primary key default gen_random_uuid(),
