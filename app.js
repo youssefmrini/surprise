@@ -809,8 +809,6 @@
     }
     if (!countdownTimer) startCountdown(els);
     setupPhotoReveal(document.getElementById("p0z"));
-    bindPoll();
-    bindUnveilClickGuard();
     syncUnveilButton();
   }
 
@@ -823,6 +821,10 @@
   } catch (e2) {
     /* private mode etc. */
   }
+
+  bindPoll();
+  bindUnveilClickGuard();
+  syncUnveilButton();
 
   window.addEventListener(
     "resize",

@@ -381,6 +381,9 @@ h2 {
   width: min(100%, 440px);
   margin: 0 auto;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 /* Quiz gate */
