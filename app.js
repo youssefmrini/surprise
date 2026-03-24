@@ -401,27 +401,56 @@
       });
   }
 
+  function revealDebugOn() {
+    try {
+      return (
+        /[?&]debug=1(?:&|$)/.test(location.search) ||
+        localStorage.getItem("reveal_debug") === "1"
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
   function scoreboardOfflineHint(res) {
     if (location.protocol === "file:") {
-      return "Open this site with a dev server: run npx vercel dev (add .env.local — see .env.example), then use the URL it prints.";
+      return revealDebugOn()
+        ? "Open via npx vercel dev with .env.local (see .env.example)."
+        : "Open this page from your published link — file:// won’t load the vote tally.";
     }
     if (res && res.networkError) {
-      return "Can’t reach " + API_VOTE + ". If the HTML is not on Vercel, add <meta name=\"vote-api\" content=\"https://YOUR_PROJECT.vercel.app/api/vote\"> in index.html.";
+      return revealDebugOn()
+        ? "Can’t reach " +
+            API_VOTE +
+            '. Set <meta name="vote-api" to your /api/vote URL if the site is not on Vercel.'
+        : "Can’t reach the vote server — counts here are only on this device.";
     }
     if (res && res.status === 503 && res.data && res.data.error) {
       var er = String(res.data.error);
       if (er.indexOf("SUPABASE") !== -1) {
-        return "Vercel needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (Project → Settings → Environment Variables), then redeploy.";
+        return revealDebugOn()
+          ? "Vercel: add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (Settings → Environment Variables), redeploy."
+          : "Shared scoreboard isn’t on yet — you’ll only see counts saved on this device.";
       }
-      return "Vote API unavailable (" + er.slice(0, 120) + ").";
+      return revealDebugOn()
+        ? "Vote API: " + er.slice(0, 120)
+        : "Vote server is unavailable — try again later.";
     }
     if (res && res.status === 404) {
-      return "No vote API at this address. Deploy this repo to Vercel or set meta vote-api to your deployment’s /api/vote URL.";
+      return revealDebugOn()
+        ? "No /api/vote here — deploy on Vercel or set meta vote-api."
+        : "Vote tally isn’t available on this address.";
     }
     if (res && res.status) {
-      return "Vote API error (HTTP " + res.status + "). Check Vercel logs and that public.votes exists (supabase/schema.sql).";
+      return revealDebugOn()
+        ? "Vote API HTTP " +
+            res.status +
+            " — check Vercel logs; ensure public.votes exists (supabase/schema.sql)."
+        : "Something went wrong loading the tally — try again later.";
     }
-    return "No live scoreboard — use npx vercel dev with Supabase in .env.local, or fix Vercel env vars and redeploy.";
+    return revealDebugOn()
+      ? "No live scoreboard — vercel dev + .env.local or fix Vercel env vars."
+      : "Live tally isn’t available — offline counts on this device only.";
   }
 
   function refreshPollTotals() {
@@ -666,16 +695,17 @@
               st.className = "poll-status poll-status--warn";
               var extra = "";
               if (
+                revealDebugOn() &&
                 err &&
                 err.status === 503 &&
                 err.data &&
                 String(err.data.error || "").indexOf("SUPABASE") !== -1
               ) {
-                extra = " Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY on Vercel.";
+                extra =
+                  " (Host: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in Vercel, then redeploy.)";
               }
               st.textContent =
-                "Couldn’t reach the server — vote saved on this device only." +
-                extra;
+                "Couldn’t sync your vote — saved on this device only." + extra;
             }
           });
       });
