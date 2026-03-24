@@ -272,6 +272,13 @@
     var canvas = document.getElementById("confetti");
     if (!canvas || !canvas.getContext) return;
 
+    var soft = false;
+    try {
+      soft = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (e0) {
+      /* ignore */
+    }
+
     var ctx = canvas.getContext("2d");
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     var w = window.innerWidth;
@@ -290,33 +297,49 @@
       "#e8ddff",
       "#ff8fb8",
       "#7ec8ff",
+      "#c77dff",
+      "#fff",
     ];
-    var n = 96;
     var parts = [];
-    for (var p = 0; p < n; p++) {
-      parts.push({
-        x: w * 0.5 + (Math.random() - 0.5) * 120,
-        y: h * 0.22 + Math.random() * 40,
-        vx: (Math.random() - 0.5) * 10,
-        vy: -Math.random() * 14 - 4,
-        g: 0.22 + Math.random() * 0.12,
-        rot: Math.random() * Math.PI * 2,
-        vr: (Math.random() - 0.5) * 0.35,
-        s: 4 + Math.random() * 7,
-        c: colors[(Math.random() * colors.length) | 0],
-        life: 0,
-      });
+    var start = performance.now();
+
+    function spawn(count, yFrac, spreadX, burstVy) {
+      for (var p = 0; p < count; p++) {
+        parts.push({
+          spawnAt: performance.now() - start,
+          x: w * 0.5 + (Math.random() - 0.5) * spreadX,
+          y: h * yFrac + Math.random() * (soft ? 28 : 48),
+          vx: (Math.random() - 0.5) * (soft ? 5 : 12),
+          vy: -Math.random() * burstVy - (soft ? 3 : 6),
+          g: 0.2 + Math.random() * 0.14,
+          rot: Math.random() * Math.PI * 2,
+          vr: (Math.random() - 0.5) * (soft ? 0.12 : 0.38),
+          s: (soft ? 3 : 4) + Math.random() * (soft ? 4 : 8),
+          c: colors[(Math.random() * colors.length) | 0],
+          round: Math.random() > 0.5,
+        });
+      }
     }
 
-    var start = performance.now();
+    spawn(soft ? 36 : 118, 0.18, soft ? 100 : 240, soft ? 9 : 16);
+    if (!soft) {
+      window.setTimeout(function () {
+        spawn(72, 0.3, 280, 11);
+      }, 240);
+    }
+
     function frame(now) {
       var t = now - start;
       ctx.clearRect(0, 0, w, h);
       var alive = false;
       for (var i = 0; i < parts.length; i++) {
         var q = parts[i];
-        q.life = t;
-        if (t > 4200) continue;
+        var age = t - q.spawnAt;
+        if (age < 0) {
+          alive = true;
+          continue;
+        }
+        if (age > 4200) continue;
         alive = true;
         q.vy += q.g;
         q.x += q.vx;
@@ -326,8 +349,14 @@
         ctx.translate(q.x, q.y);
         ctx.rotate(q.rot);
         ctx.fillStyle = q.c;
-        ctx.globalAlpha = Math.max(0, 1 - t / 4000);
-        ctx.fillRect(-q.s * 0.5, -q.s * 0.5, q.s, q.s * 1.4);
+        ctx.globalAlpha = Math.max(0, 1 - age / 4000);
+        if (q.round) {
+          ctx.beginPath();
+          ctx.arc(0, 0, q.s * 0.55, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-q.s * 0.5, -q.s * 0.5, q.s, q.s * 1.35);
+        }
         ctx.restore();
       }
       if (alive) requestAnimationFrame(frame);
