@@ -407,8 +407,8 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        display_name: name,
-        gender_vote: vote,
+        name: name,
+        gender: vote,
       }),
     }).then(function (r) {
       if (!r.ok) throw new Error("post failed");

@@ -33,9 +33,7 @@ async function verifySupabase() {
     fail("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for --supabase");
     return;
   }
-  var url =
-    base +
-    "/rest/v1/gender_predictions?select=id&gender_vote=eq.girl&limit=1";
+  var url = base + "/rest/v1/votes?select=id&gender=eq.girl&limit=1";
   var res = await fetch(url, {
     headers: {
       apikey: key,
@@ -47,7 +45,7 @@ async function verifySupabase() {
     fail("Supabase REST " + res.status + ": " + t.slice(0, 200));
     return;
   }
-  ok("Supabase: gender_predictions is readable (GET " + res.status + ")");
+  ok("Supabase: votes table is readable (GET " + res.status + ")");
 }
 
 async function verifySite() {
@@ -95,8 +93,8 @@ async function verifySite() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      display_name: name,
-      gender_vote: "girl",
+      name: name,
+      gender: "girl",
     }),
   });
   var text2 = await res2.text();

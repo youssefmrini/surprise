@@ -1,18 +1,23 @@
 /**
- * Vercel serverless — no npm dependencies: talks to Supabase Postgres via REST (fetch only).
+ * Vercel serverless — no npm deps: Supabase Postgres via REST (fetch only).
  *
- * Env (set in Vercel — use the Supabase integration to inject these automatically):
- *   SUPABASE_URL          https://xxxx.supabase.co
- *   SUPABASE_SERVICE_ROLE_KEY   service_role secret (server only, never in the browser)
+ * Table: public.votes
+ *   name    text   — voter’s name
+ *   gender  text   — 'boy' or 'girl'
  *
- * Create the table once: paste supabase/schema.sql in Supabase → SQL Editor → Run.
+ * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Schema: supabase/schema.sql (run in Supabase SQL Editor)
  */
 
-async function countForVote(supabaseUrl, serviceKey, vote) {
+var TABLE = "votes";
+
+async function countForGender(supabaseUrl, serviceKey, gender) {
   var url =
     supabaseUrl.replace(/\/$/, "") +
-    "/rest/v1/gender_predictions?gender_vote=eq." +
-    encodeURIComponent(vote) +
+    "/rest/v1/" +
+    TABLE +
+    "?gender=eq." +
+    encodeURIComponent(gender) +
     "&select=id";
   var res = await fetch(url, {
     method: "HEAD",
@@ -33,13 +38,13 @@ async function countForVote(supabaseUrl, serviceKey, vote) {
 }
 
 async function getCounts(supabaseUrl, serviceKey) {
-  var boy = await countForVote(supabaseUrl, serviceKey, "boy");
-  var girl = await countForVote(supabaseUrl, serviceKey, "girl");
+  var boy = await countForGender(supabaseUrl, serviceKey, "boy");
+  var girl = await countForGender(supabaseUrl, serviceKey, "girl");
   return { boy: boy, girl: girl, total: boy + girl };
 }
 
-async function insertVote(supabaseUrl, serviceKey, name, vote) {
-  var url = supabaseUrl.replace(/\/$/, "") + "/rest/v1/gender_predictions";
+async function insertVote(supabaseUrl, serviceKey, name, gender) {
+  var url = supabaseUrl.replace(/\/$/, "") + "/rest/v1/" + TABLE;
   var res = await fetch(url, {
     method: "POST",
     headers: {
@@ -49,8 +54,8 @@ async function insertVote(supabaseUrl, serviceKey, name, vote) {
       Prefer: "return=minimal",
     },
     body: JSON.stringify({
-      display_name: name,
-      gender_vote: vote,
+      name: name,
+      gender: gender,
     }),
   });
   if (!res.ok) {
@@ -94,6 +99,21 @@ function parseJsonBody(req) {
   return {};
 }
 
+function readNameAndGender(body) {
+  var name =
+    (body && body.name) != null
+      ? body.name
+      : body && body.display_name != null
+        ? body.display_name
+        : "";
+  name = String(name)
+    .trim()
+    .slice(0, 80);
+  var gender = body && body.gender != null ? body.gender : body && body.gender_vote;
+  gender = gender === "boy" || gender === "girl" ? gender : null;
+  return { name: name, gender: gender };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -123,17 +143,15 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "POST") {
       var body = parseJsonBody(req);
-      var name = String((body && body.display_name) || "")
-        .trim()
-        .slice(0, 80);
-      var vote = body && body.gender_vote;
-      if (!name || (vote !== "boy" && vote !== "girl")) {
+      var parsed = readNameAndGender(body);
+      if (!parsed.name || !parsed.gender) {
         return send(res, 400, {
-          error: "Need display_name (1–80 chars) and gender_vote: boy or girl",
+          error:
+            "Need name (1–80 chars) and gender: boy or girl (also accepts display_name + gender_vote for older clients)",
         });
       }
 
-      await insertVote(supabaseUrl, serviceKey, name, vote);
+      await insertVote(supabaseUrl, serviceKey, parsed.name, parsed.gender);
       var c2 = await getCounts(supabaseUrl, serviceKey);
       return send(res, 201, c2);
     }

@@ -1,7 +1,7 @@
 {
   "name": "surprise",
   "private": true,
-  "description": "Static site + Vercel /api/vote (Supabase REST via fetch, zero npm deps)",
+  "description": "Static site + Vercel /api/vote → Supabase table votes (name, gender)",
   "engines": {
     "node": ">=20"
   }

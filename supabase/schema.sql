@@ -1,19 +1,27 @@
--- Supabase → SQL Editor → paste and Run once per project.
--- Vercel: add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or use Vercel’s Supabase integration).
+-- Supabase → SQL Editor → Run once (new project).
+-- Vercel env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Supabase integration can set these).
 
-create table if not exists public.gender_predictions (
+-- One row per vote: the person's name and whether they picked boy or girl.
+create table if not exists public.votes (
   id uuid primary key default gen_random_uuid(),
-  display_name text not null check (char_length(trim(display_name)) between 1 and 80),
-  gender_vote text not null check (gender_vote in ('boy', 'girl')),
+  name text not null check (char_length(trim(name)) between 1 and 80),
+  gender text not null check (gender in ('boy', 'girl')),
   created_at timestamptz not null default now()
 );
 
-create index if not exists gender_predictions_created_at_idx
-  on public.gender_predictions (created_at desc);
+create index if not exists votes_created_at_idx on public.votes (created_at desc);
 
-alter table public.gender_predictions enable row level security;
+alter table public.votes enable row level security;
 
--- Block direct reads/writes from the browser; the Vercel API uses the service role and bypasses RLS.
--- (No policies = anon/authenticated cannot access the table.)
+-- No policies: only the service role (Vercel API) can read/write; browsers cannot access the table directly.
 
-comment on table public.gender_predictions is 'Name + team vote from the gender reveal site (via Vercel API only).';
+comment on table public.votes is 'Gender reveal poll: voter name + boy or girl.';
+comment on column public.votes.name is 'Voter display name.';
+comment on column public.votes.gender is 'Either boy or girl.';
+
+-- ---------------------------------------------------------------------------
+-- Optional: migrate from legacy table gender_predictions (same database only)
+-- ---------------------------------------------------------------------------
+-- insert into public.votes (name, gender, created_at)
+-- select display_name, gender_vote, created_at from public.gender_predictions;
+-- drop table if exists public.gender_predictions;
