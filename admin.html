@@ -10,23 +10,15 @@
   <body>
     <h1>Reveal admin</h1>
     <p class="sub">
-      Enter the server <strong>ADMIN_SECRET</strong> (Vercel env, never share).
-      Loads votes (name, team, time) and every quiz guess (text, unlocked or not,
-      time).
+      Hidden link only — no password. Shows votes (name, team, time) and every
+      quiz guess (text, unlocked or not, time). Anyone with this URL can read
+      this data; don’t share the link publicly.
     </p>
 
     <div class="panel">
-      <div class="row">
-        <div>
-          <label for="secret">Admin secret</label>
-          <input
-            id="secret"
-            type="password"
-            autocomplete="current-password"
-            placeholder="Paste ADMIN_SECRET"
-          />
-        </div>
-        <button type="button" id="loadBtn">Load data</button>
+      <div class="row row--toolbar">
+        <button type="button" id="loadBtn">Refresh</button>
+        <span id="status" class="status" aria-live="polite"></span>
       </div>
       <p id="err" class="err" hidden></p>
     </div>
@@ -42,24 +34,27 @@
     </div>
 
     <p class="meta">
-      API: <code>/api/admin</code> (GET, Bearer token). Tables:
-      <code>votes</code>, <code>quiz_guesses</code> — see
-      <code>supabase/schema.sql</code>.
+      Data from <code>/api/admin</code> (GET). Tables: <code>votes</code>,
+      <code>quiz_guesses</code> — see <code>supabase/schema.sql</code>.
     </p>
 
     <script>
       (function () {
         "use strict";
 
-        var secretEl = document.getElementById("secret");
         var loadBtn = document.getElementById("loadBtn");
         var errEl = document.getElementById("err");
+        var statusEl = document.getElementById("status");
         var votesWrap = document.getElementById("votesWrap");
         var guessesWrap = document.getElementById("guessesWrap");
 
         function showErr(msg) {
           errEl.hidden = !msg;
           errEl.textContent = msg || "";
+        }
+
+        function setStatus(msg) {
+          if (statusEl) statusEl.textContent = msg || "";
         }
 
         function fmtWhen(iso) {
@@ -159,16 +154,9 @@
 
         function load() {
           showErr("");
-          var secret = secretEl.value.trim();
-          if (secret.length < 12) {
-            showErr("Secret looks too short — use the full ADMIN_SECRET from Vercel.");
-            return;
-          }
+          setStatus("Loading…");
           loadBtn.disabled = true;
-          fetch("/api/admin", {
-            method: "GET",
-            headers: { Authorization: "Bearer " + secret },
-          })
+          fetch("/api/admin", { method: "GET" })
             .then(function (r) {
               return r.text().then(function (text) {
                 var data = null;
@@ -183,6 +171,7 @@
             .then(function (res) {
               loadBtn.disabled = false;
               if (!res.ok) {
+                setStatus("");
                 var msg =
                   (res.data && res.data.error) ||
                   res.raw ||
@@ -191,6 +180,7 @@
                 return;
               }
               if (!res.data) {
+                setStatus("");
                 showErr("Empty response.");
                 return;
               }
@@ -202,17 +192,23 @@
               guessesWrap.appendChild(
                 tableForGuesses(res.data.guesses || [])
               );
+              var nv = (res.data.votes && res.data.votes.length) || 0;
+              var ng = (res.data.guesses && res.data.guesses.length) || 0;
+              setStatus("Loaded " + nv + " vote(s), " + ng + " guess(es).");
             })
             .catch(function () {
               loadBtn.disabled = false;
+              setStatus("");
               showErr("Network error — open this page from your deployed site (same origin as /api/admin).");
             });
         }
 
         loadBtn.addEventListener("click", load);
-        secretEl.addEventListener("keydown", function (e) {
-          if (e.key === "Enter") load();
-        });
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", load);
+        } else {
+          load();
+        }
       })();
     </script>
   </body>

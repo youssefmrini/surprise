@@ -64,30 +64,14 @@ h1 {
   margin-bottom: 1rem;
 }
 
-label {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.row--toolbar {
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.status {
+  font-size: 0.85rem;
   color: var(--muted);
-  margin-bottom: 0.35rem;
-}
-
-input[type="password"] {
-  width: min(100%, 320px);
-  padding: 0.65rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.35);
-  color: var(--text);
-  font-size: 1rem;
-}
-
-input[type="password"]:focus {
-  outline: none;
-  border-color: rgba(201, 168, 255, 0.45);
-  box-shadow: 0 0 0 3px rgba(201, 168, 255, 0.12);
 }
 
 button {
