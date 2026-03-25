@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin — votes & guesses</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <h1>Reveal admin</h1>
+    <p class="sub">
+      Enter the server <strong>ADMIN_SECRET</strong> (Vercel env, never share).
+      Loads votes (name, team, time) and every quiz guess (text, unlocked or not,
+      time).
+    </p>
+
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label for="secret">Admin secret</label>
+          <input
+            id="secret"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Paste ADMIN_SECRET"
+          />
+        </div>
+        <button type="button" id="loadBtn">Load data</button>
+      </div>
+      <p id="err" class="err" hidden></p>
+    </div>
+
+    <div class="panel">
+      <h2>Votes</h2>
+      <div id="votesWrap"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Quiz guesses</h2>
+      <div id="guessesWrap"></div>
+    </div>
+
+    <p class="meta">
+      API: <code>/api/admin</code> (GET, Bearer token). Tables:
+      <code>votes</code>, <code>quiz_guesses</code> — see
+      <code>supabase/schema.sql</code>.
+    </p>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var secretEl = document.getElementById("secret");
+        var loadBtn = document.getElementById("loadBtn");
+        var errEl = document.getElementById("err");
+        var votesWrap = document.getElementById("votesWrap");
+        var guessesWrap = document.getElementById("guessesWrap");
+
+        function showErr(msg) {
+          errEl.hidden = !msg;
+          errEl.textContent = msg || "";
+        }
+
+        function fmtWhen(iso) {
+          if (!iso) return "—";
+          try {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            return d.toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            });
+          } catch (e) {
+            return iso;
+          }
+        }
+
+        function clear(el) {
+          while (el.firstChild) el.removeChild(el.firstChild);
+        }
+
+        function tableForVotes(rows) {
+          if (!rows || !rows.length) {
+            var p = document.createElement("p");
+            p.className = "empty";
+            p.textContent = "No votes yet.";
+            return p;
+          }
+          var t = document.createElement("table");
+          var thead = document.createElement("thead");
+          var hr = document.createElement("tr");
+          ["Name", "Vote", "When"].forEach(function (h) {
+            var th = document.createElement("th");
+            th.textContent = h;
+            hr.appendChild(th);
+          });
+          thead.appendChild(hr);
+          t.appendChild(thead);
+          var tb = document.createElement("tbody");
+          rows.forEach(function (r) {
+            var tr = document.createElement("tr");
+            var tdName = document.createElement("td");
+            tdName.textContent = r.name != null ? String(r.name) : "";
+            var tdG = document.createElement("td");
+            var g = r.gender != null ? String(r.gender) : "";
+            tdG.textContent = g === "girl" ? "Girl" : g === "boy" ? "Boy" : g;
+            if (g === "girl") tdG.classList.add("girl");
+            if (g === "boy") tdG.classList.add("boy");
+            var tdT = document.createElement("td");
+            tdT.textContent = fmtWhen(r.created_at);
+            tr.appendChild(tdName);
+            tr.appendChild(tdG);
+            tr.appendChild(tdT);
+            tb.appendChild(tr);
+          });
+          t.appendChild(tb);
+          return t;
+        }
+
+        function tableForGuesses(rows) {
+          if (!rows || !rows.length) {
+            var p = document.createElement("p");
+            p.className = "empty";
+            p.textContent = "No guesses logged (or table missing — run schema.sql).";
+            return p;
+          }
+          var t = document.createElement("table");
+          var thead = document.createElement("thead");
+          var hr = document.createElement("tr");
+          ["Guess", "Unlocked", "When"].forEach(function (h) {
+            var th = document.createElement("th");
+            th.textContent = h;
+            hr.appendChild(th);
+          });
+          thead.appendChild(hr);
+          t.appendChild(thead);
+          var tb = document.createElement("tbody");
+          rows.forEach(function (r) {
+            var tr = document.createElement("tr");
+            var tdTxt = document.createElement("td");
+            tdTxt.textContent = r.text != null ? String(r.text) : "";
+            var tdP = document.createElement("td");
+            var span = document.createElement("span");
+            span.className =
+              "badge " + (r.passed ? "badge--yes" : "badge--no");
+            span.textContent = r.passed ? "Yes" : "No";
+            tdP.appendChild(span);
+            var tdT = document.createElement("td");
+            tdT.textContent = fmtWhen(r.created_at);
+            tr.appendChild(tdTxt);
+            tr.appendChild(tdP);
+            tr.appendChild(tdT);
+            tb.appendChild(tr);
+          });
+          t.appendChild(tb);
+          return t;
+        }
+
+        function load() {
+          showErr("");
+          var secret = secretEl.value.trim();
+          if (secret.length < 12) {
+            showErr("Secret looks too short — use the full ADMIN_SECRET from Vercel.");
+            return;
+          }
+          loadBtn.disabled = true;
+          fetch("/api/admin", {
+            method: "GET",
+            headers: { Authorization: "Bearer " + secret },
+          })
+            .then(function (r) {
+              return r.text().then(function (text) {
+                var data = null;
+                try {
+                  data = text ? JSON.parse(text) : null;
+                } catch (e) {
+                  data = null;
+                }
+                return { ok: r.ok, status: r.status, data: data, raw: text };
+              });
+            })
+            .then(function (res) {
+              loadBtn.disabled = false;
+              if (!res.ok) {
+                var msg =
+                  (res.data && res.data.error) ||
+                  res.raw ||
+                  "Request failed (" + res.status + ")";
+                showErr(msg);
+                return;
+              }
+              if (!res.data) {
+                showErr("Empty response.");
+                return;
+              }
+              clear(votesWrap);
+              clear(guessesWrap);
+              votesWrap.appendChild(
+                tableForVotes(res.data.votes || [])
+              );
+              guessesWrap.appendChild(
+                tableForGuesses(res.data.guesses || [])
+              );
+            })
+            .catch(function () {
+              loadBtn.disabled = false;
+              showErr("Network error — open this page from your deployed site (same origin as /api/admin).");
+            });
+        }
+
+        loadBtn.addEventListener("click", load);
+        secretEl.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") load();
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -29,6 +29,7 @@
     voteApiRaw && String(voteApiRaw).trim()
       ? String(voteApiRaw).trim().replace(/\/$/, "")
       : "/api/vote";
+  var API_GUESS = API_VOTE.replace(/\/vote\/?$/i, "/guess");
   var pollUiRef = null;
   var unveilClickGuardBound = false;
 
@@ -414,6 +415,21 @@
     if (ui.nameInput) ui.nameInput.readOnly = locked;
   }
 
+  /** Log every quiz submission (pass or fail); failures are silent. */
+  function postGuessLog(text, passed) {
+    var t = String(text || "").trim().slice(0, 280);
+    if (!t) return;
+    try {
+      fetch(API_GUESS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: t, passed: !!passed }),
+      }).catch(function () {});
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
   function fetchVoteApi(method, jsonBody) {
     var init = { method: method || "GET", headers: {} };
     if (jsonBody != null) {
@@ -776,12 +792,14 @@
     quizForm.addEventListener("submit", function (e) {
       e.preventDefault();
       var text = expectation.value;
+      var unlocked = passesExpectation(text);
+      postGuessLog(text, unlocked);
       if (quizFeedback) {
         quizFeedback.hidden = true;
         quizFeedback.className = "wf1";
       }
 
-      if (passesExpectation(text)) {
+      if (unlocked) {
         var susp = document.getElementById("s0z");
         var submitBtn = quizForm.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.disabled = true;
