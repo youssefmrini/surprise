@@ -368,6 +368,8 @@
 
   var countdownTimer = null;
   var pollBound = false;
+  /** Blocks double submit (two quick clicks / Enter) → duplicate /api/guess rows. */
+  var quizSubmitBusy = false;
 
   function renderBars(ui, c) {
     var g = c.girl || 0;
@@ -700,9 +702,10 @@
     if (pollBound) return;
     pollBound = true;
 
+    var voteInFlight = false;
     buttons.forEach(function (btn) {
       btn.addEventListener("click", function () {
-        if (voteLocked()) return;
+        if (voteLocked() || voteInFlight) return;
 
         var p = btn.getAttribute("data-p");
         if (p !== "0" && p !== "1") return;
@@ -720,6 +723,7 @@
         }
         if (nameHint) nameHint.hidden = true;
 
+        voteInFlight = true;
         postVote(name, choice)
           .then(function (data) {
             renderBars(ui, { girl: data.girl, boy: data.boy });
@@ -776,6 +780,9 @@
               st.textContent =
                 "Couldn’t sync your vote — saved on this device only." + extra;
             }
+          })
+          .then(function () {
+            voteInFlight = false;
           });
       });
     });
@@ -791,6 +798,12 @@
   if (quizForm && expectation && quizGate && revealSecret) {
     quizForm.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (quizSubmitBusy) return;
+      quizSubmitBusy = true;
+
+      var submitBtn = quizForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
       var text = expectation.value;
       var unlocked = passesExpectation(text);
       postGuessLog(text, unlocked);
@@ -799,16 +812,19 @@
         quizFeedback.className = "wf1";
       }
 
+      function releaseQuizForm() {
+        quizSubmitBusy = false;
+        if (submitBtn) submitBtn.disabled = false;
+      }
+
       if (unlocked) {
         var susp = document.getElementById("s0z");
-        var submitBtn = quizForm.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.disabled = true;
         if (susp) susp.hidden = false;
 
         var delay = 1100 + Math.random() * 900;
         window.setTimeout(function () {
           if (susp) susp.hidden = true;
-          if (submitBtn) submitBtn.disabled = false;
           try {
             sessionStorage.setItem(SESSION_UNLOCK, "1");
           } catch (err) {
@@ -817,6 +833,7 @@
           if (glassCard) glassCard.classList.add("glass-card--gx");
           openReveal();
           burstConfetti();
+          releaseQuizForm();
 
           window.setTimeout(function () {
             revealSecret.scrollIntoView({
@@ -847,6 +864,7 @@
           hintIndex += 1;
           quizFeedback.textContent += hint;
         }
+        releaseQuizForm();
       }
     });
   }
