@@ -1,15 +1,15 @@
 (function () {
   "use strict";
 
-  /* Countdown + Unveil: May 30, 3:00 PM local (same calendar moment each year). */
-  function mayThirtiethAt(year, hour, minute) {
-    return new Date(year, 4, 30, hour, minute, 0, 0);
+  /* Countdown + Unveil: May 31 (last day of May), 3:00 PM local. */
+  function lastDayOfMayAt(year, hour, minute) {
+    return new Date(year, 4, 31, hour, minute, 0, 0);
   }
   var _y = new Date().getFullYear();
-  var TARGET = mayThirtiethAt(_y, 15, 0);
+  var TARGET = lastDayOfMayAt(_y, 15, 0);
   while (TARGET.getTime() <= Date.now()) {
     _y += 1;
-    TARGET = mayThirtiethAt(_y, 15, 0);
+    TARGET = lastDayOfMayAt(_y, 15, 0);
     if (_y > new Date().getFullYear() + 8) break;
   }
   var POLL_KEY = "jihaneGenderPollCounts";
