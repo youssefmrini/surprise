@@ -3,6 +3,8 @@ import { Client } from "pg";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
+const SOURCE_ADMIN_URL = process.env.SOURCE_ADMIN_URL || "https://guessnow.vercel.app/api/admin";
+const SOURCE_REVEAL_URL = process.env.SOURCE_REVEAL_URL || "https://guessnow.vercel.app/api/reveal";
 
 function fail(msg) {
   console.error("❌ " + msg);
@@ -10,8 +12,7 @@ function fail(msg) {
 }
 
 if (!DATABASE_URL) fail("Missing DATABASE_URL");
-if (!SUPABASE_URL) fail("Missing SUPABASE_URL");
-if (!SUPABASE_SERVICE_ROLE_KEY) fail("Missing SUPABASE_SERVICE_ROLE_KEY");
+const hasSupabaseCreds = !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
 async function fetchSupabaseRows(table, select) {
   const url =
@@ -83,9 +84,33 @@ async function ensureNeonSchema(client) {
 }
 
 async function run() {
-  const votes = await fetchSupabaseRows("votes", "name,gender,created_at");
-  const guesses = await fetchSupabaseRows("quiz_guesses", "text,passed,created_at");
-  const reveal = await fetchRevealConfig();
+  let votes = [];
+  let guesses = [];
+  let reveal = null;
+
+  if (hasSupabaseCreds) {
+    votes = await fetchSupabaseRows("votes", "name,gender,created_at");
+    guesses = await fetchSupabaseRows("quiz_guesses", "text,passed,created_at");
+    reveal = await fetchRevealConfig();
+    console.log("ℹ️ Source: Supabase REST");
+  } else {
+    const adminRes = await fetch(SOURCE_ADMIN_URL);
+    if (!adminRes.ok) {
+      const txt = await adminRes.text();
+      fail(`SOURCE_ADMIN_URL failed: ${adminRes.status} ${txt.slice(0, 260)}`);
+    }
+    const adminJson = await adminRes.json();
+    votes = Array.isArray(adminJson.votes) ? adminJson.votes : [];
+    guesses = Array.isArray(adminJson.guesses) ? adminJson.guesses : [];
+
+    try {
+      const revealRes = await fetch(SOURCE_REVEAL_URL);
+      if (revealRes.ok) reveal = await revealRes.json();
+    } catch (e) {
+      reveal = null;
+    }
+    console.log("ℹ️ Source: existing /api/admin JSON");
+  }
 
   const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
