@@ -37,6 +37,31 @@ async function fetchRows(supabaseUrl, serviceKey, table, columns) {
   return res.json();
 }
 
+async function fetchRevealConfig(supabaseUrl, serviceKey) {
+  var url =
+    supabaseUrl.replace(/\/$/, "") +
+    "/rest/v1/reveal_config?select=id,reveal_gender,updated_at&id=eq.main&limit=1";
+  var res = await fetch(url, {
+    headers: {
+      apikey: serviceKey,
+      Authorization: "Bearer " + serviceKey,
+    },
+  });
+  if (!res.ok) {
+    var t = await res.text();
+    throw new Error("reveal_config " + res.status + " " + t.slice(0, 200));
+  }
+  var rows = await res.json();
+  var row = rows && rows[0] ? rows[0] : null;
+  return {
+    gender:
+      row && (row.reveal_gender === "girl" || row.reveal_gender === "boy")
+        ? row.reveal_gender
+        : "girl",
+    updated_at: row && row.updated_at ? row.updated_at : null,
+  };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -63,6 +88,7 @@ module.exports = async function handler(req, res) {
   try {
     var votes;
     var guesses;
+    var reveal;
     try {
       votes = await fetchRows(
         supabaseUrl,
@@ -85,10 +111,17 @@ module.exports = async function handler(req, res) {
       console.error(gErr);
       guesses = [];
     }
+    try {
+      reveal = await fetchRevealConfig(supabaseUrl, serviceKey);
+    } catch (rErr) {
+      console.error(rErr);
+      reveal = { gender: "girl", updated_at: null };
+    }
 
     return send(res, 200, {
       votes: votes,
       guesses: guesses,
+      reveal: reveal,
       limit: LIMIT,
     });
   } catch (err) {

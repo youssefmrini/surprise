@@ -34,6 +34,22 @@ alter table public.quiz_guesses enable row level security;
 
 comment on table public.quiz_guesses is 'Gender reveal quiz: raw guesses + whether they unlocked the reveal.';
 
+-- Admin-controlled target for the Unveil button (singleton row id='main').
+create table if not exists public.reveal_config (
+  id text primary key,
+  reveal_gender text not null check (reveal_gender in ('boy', 'girl')),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.reveal_config enable row level security;
+
+insert into public.reveal_config (id, reveal_gender)
+values ('main', 'girl')
+on conflict (id) do nothing;
+
+comment on table public.reveal_config is 'Singleton reveal target used by /api/reveal (girl or boy).';
+comment on column public.reveal_config.reveal_gender is 'Which hidden reveal page should open from the Unveil button.';
+
 -- ---------------------------------------------------------------------------
 -- Optional: migrate from legacy table gender_predictions (same database only)
 -- ---------------------------------------------------------------------------

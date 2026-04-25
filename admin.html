@@ -20,6 +20,27 @@
         <button type="button" id="loadBtn">Refresh</button>
         <span id="status" class="status" aria-live="polite"></span>
       </div>
+      <div class="reveal-picker">
+        <p class="reveal-picker__title">Unveil target</p>
+        <p class="reveal-picker__sub">
+          Choose which hidden reveal page opens from the main
+          <strong>Unveil</strong> button.
+        </p>
+        <div class="reveal-picker__choices" role="radiogroup" aria-label="Reveal target">
+          <label class="choice choice--girl">
+            <input type="radio" name="revealGender" id="revealGirl" value="girl" />
+            <span>Girl reveal</span>
+          </label>
+          <label class="choice choice--boy">
+            <input type="radio" name="revealGender" id="revealBoy" value="boy" />
+            <span>Boy reveal</span>
+          </label>
+        </div>
+        <div class="row row--toolbar reveal-picker__actions">
+          <button type="button" id="saveRevealBtn">Save reveal target</button>
+          <span id="revealStatus" class="status" aria-live="polite"></span>
+        </div>
+      </div>
       <p id="err" class="err" hidden></p>
     </div>
 
@@ -34,8 +55,9 @@
     </div>
 
     <p class="meta">
-      Data from <code>/api/admin</code> (GET). Tables: <code>votes</code>,
-      <code>quiz_guesses</code> — see <code>supabase/schema.sql</code>.
+      Data from <code>/api/admin</code> (GET) and <code>/api/reveal</code>
+      (GET/POST). Tables: <code>votes</code>, <code>quiz_guesses</code>,
+      <code>reveal_config</code> — see <code>supabase/schema.sql</code>.
     </p>
 
     <script>
@@ -47,6 +69,10 @@
         var statusEl = document.getElementById("status");
         var votesWrap = document.getElementById("votesWrap");
         var guessesWrap = document.getElementById("guessesWrap");
+        var revealGirl = document.getElementById("revealGirl");
+        var revealBoy = document.getElementById("revealBoy");
+        var saveRevealBtn = document.getElementById("saveRevealBtn");
+        var revealStatusEl = document.getElementById("revealStatus");
 
         function showErr(msg) {
           errEl.hidden = !msg;
@@ -55,6 +81,35 @@
 
         function setStatus(msg) {
           if (statusEl) statusEl.textContent = msg || "";
+        }
+
+        function setRevealStatus(msg) {
+          if (revealStatusEl) revealStatusEl.textContent = msg || "";
+        }
+
+        function selectedRevealGender() {
+          if (revealBoy && revealBoy.checked) return "boy";
+          return "girl";
+        }
+
+        function setRevealChoice(gender) {
+          var g = gender === "boy" ? "boy" : "girl";
+          if (revealGirl) revealGirl.checked = g === "girl";
+          if (revealBoy) revealBoy.checked = g === "boy";
+        }
+
+        function fetchJson(url, init) {
+          return fetch(url, init || { method: "GET" }).then(function (r) {
+            return r.text().then(function (text) {
+              var data = null;
+              try {
+                data = text ? JSON.parse(text) : null;
+              } catch (e) {
+                data = null;
+              }
+              return { ok: r.ok, status: r.status, data: data, raw: text };
+            });
+          });
         }
 
         function fmtWhen(iso) {
@@ -155,20 +210,15 @@
         function load() {
           showErr("");
           setStatus("Loading…");
+          setRevealStatus("");
           loadBtn.disabled = true;
-          fetch("/api/admin", { method: "GET" })
-            .then(function (r) {
-              return r.text().then(function (text) {
-                var data = null;
-                try {
-                  data = text ? JSON.parse(text) : null;
-                } catch (e) {
-                  data = null;
-                }
-                return { ok: r.ok, status: r.status, data: data, raw: text };
-              });
-            })
-            .then(function (res) {
+          Promise.all([
+            fetchJson("/api/admin", { method: "GET" }),
+            fetchJson("/api/reveal", { method: "GET" }),
+          ])
+            .then(function (all) {
+              var res = all[0];
+              var revealRes = all[1];
               loadBtn.disabled = false;
               if (!res.ok) {
                 setStatus("");
@@ -195,6 +245,17 @@
               var nv = (res.data.votes && res.data.votes.length) || 0;
               var ng = (res.data.guesses && res.data.guesses.length) || 0;
               setStatus("Loaded " + nv + " vote(s), " + ng + " guess(es).");
+
+              if (revealRes.ok && revealRes.data) {
+                setRevealChoice(revealRes.data.gender);
+                var updated = revealRes.data.updated_at
+                  ? "Updated " + fmtWhen(revealRes.data.updated_at)
+                  : "Using default target";
+                setRevealStatus("Current target: " + selectedRevealGender() + ". " + updated + ".");
+              } else {
+                setRevealStatus("Could not load reveal target — showing default (girl).");
+                setRevealChoice("girl");
+              }
             })
             .catch(function () {
               loadBtn.disabled = false;
@@ -203,7 +264,42 @@
             });
         }
 
+        function saveReveal() {
+          var gender = selectedRevealGender();
+          setRevealStatus("Saving…");
+          saveRevealBtn.disabled = true;
+          fetchJson("/api/reveal", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ gender: gender }),
+          })
+            .then(function (res) {
+              saveRevealBtn.disabled = false;
+              if (!res.ok) {
+                var msg =
+                  (res.data && res.data.error) ||
+                  res.raw ||
+                  "Save failed (" + res.status + ")";
+                setRevealStatus(msg);
+                return;
+              }
+              setRevealChoice(res.data && res.data.gender ? res.data.gender : gender);
+              var updated =
+                res.data && res.data.updated_at
+                  ? fmtWhen(res.data.updated_at)
+                  : "just now";
+              setRevealStatus(
+                "Saved: " + selectedRevealGender() + " reveal (updated " + updated + ")."
+              );
+            })
+            .catch(function () {
+              saveRevealBtn.disabled = false;
+              setRevealStatus("Network error while saving reveal target.");
+            });
+        }
+
         loadBtn.addEventListener("click", load);
+        saveRevealBtn.addEventListener("click", saveReveal);
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", load);
         } else {

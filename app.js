@@ -1,15 +1,15 @@
 (function () {
   "use strict";
 
-  /* Countdown + Unveil: May 30, 3:00 PM local. */
+  /* Countdown + Unveil: May 30, 5:00 PM local. */
   function mayThirtiethAt(year, hour, minute) {
     return new Date(year, 4, 30, hour, minute, 0, 0);
   }
   var _y = new Date().getFullYear();
-  var TARGET = mayThirtiethAt(_y, 15, 0);
+  var TARGET = mayThirtiethAt(_y, 17, 0);
   while (TARGET.getTime() <= Date.now()) {
     _y += 1;
-    TARGET = mayThirtiethAt(_y, 15, 0);
+    TARGET = mayThirtiethAt(_y, 17, 0);
     if (_y > new Date().getFullYear() + 8) break;
   }
   var POLL_KEY = "jihaneGenderPollCounts";
@@ -25,6 +25,12 @@
       ? String(voteApiRaw).trim().replace(/\/$/, "")
       : "/api/vote";
   var API_GUESS = API_VOTE.replace(/\/vote\/?$/i, "/guess");
+  var API_REVEAL = API_VOTE.replace(/\/vote\/?$/i, "/reveal");
+  var REVEAL_TARGETS = {
+    girl: "k4m9w.html",
+    boy: "q8v3t.html",
+  };
+  var revealGender = "girl";
   var pollUiRef = null;
   var unveilClickGuardBound = false;
 
@@ -455,6 +461,52 @@
       .catch(function () {
         return { ok: false, status: 0, data: null, raw: "", networkError: true };
       });
+  }
+
+  function normalizeRevealGender(v) {
+    return v === "girl" || v === "boy" ? v : "girl";
+  }
+
+  function applyRevealTarget(gender) {
+    revealGender = normalizeRevealGender(gender);
+    var el = document.getElementById("u0z");
+    if (!el) return;
+    el.setAttribute("href", REVEAL_TARGETS[revealGender]);
+    el.setAttribute("data-reveal-gender", revealGender);
+  }
+
+  function fetchRevealApi() {
+    return fetch(API_REVEAL, { method: "GET" })
+      .then(function (r) {
+        return r.text().then(function (text) {
+          var data = null;
+          if (text) {
+            try {
+              data = JSON.parse(text);
+            } catch (e) {
+              data = null;
+            }
+          }
+          return {
+            ok: r.ok,
+            status: r.status,
+            data: data,
+            raw: text,
+          };
+        });
+      })
+      .catch(function () {
+        return { ok: false, status: 0, data: null, raw: "", networkError: true };
+      });
+  }
+
+  function refreshRevealTarget() {
+    applyRevealTarget(revealGender);
+    return fetchRevealApi().then(function (res) {
+      if (res.ok && res.data) {
+        applyRevealTarget(res.data.gender);
+      }
+    });
   }
 
   function revealDebugOn() {
@@ -893,6 +945,7 @@
     }
     if (!countdownTimer) startCountdown(els);
     setupPhotoReveal(document.getElementById("p0z"));
+    refreshRevealTarget();
     bindPoll();
     bindUnveilClickGuard();
     syncUnveilButton();
@@ -908,6 +961,7 @@
     /* private mode etc. */
   }
 
+  refreshRevealTarget();
   syncUnveilButton();
 
   window.addEventListener(
