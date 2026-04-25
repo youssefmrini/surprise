@@ -580,14 +580,7 @@
         renderBars(ui, { girl: res.data.girl, boy: res.data.boy });
         if (statusEl) {
           statusEl.className = "poll-status poll-status--ok";
-          statusEl.textContent =
-            res.data.total > 0
-              ? "Live tally — " +
-                res.data.total +
-                " vote" +
-                (res.data.total === 1 ? "" : "s") +
-                " so far"
-              : "Live tally — be the first to vote";
+          statusEl.textContent = "Live tally — votes are coming in";
         }
         applyVoteLockState(ui);
         syncYouMessage(ui);
@@ -786,12 +779,7 @@
             var st = document.getElementById("a0z");
             if (st) {
               st.className = "poll-status poll-status--ok";
-              st.textContent =
-                "Live tally — " +
-                data.total +
-                " vote" +
-                (data.total === 1 ? "" : "s") +
-                " so far";
+              st.textContent = "Live tally — votes are coming in";
             }
           })
           .catch(function (err) {
