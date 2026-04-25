@@ -440,6 +440,45 @@ body {
   transform: translateY(-2px);
 }
 
+@media (max-width: 480px) {
+  .st0 {
+    padding: clamp(1.1rem, 5vw, 1.75rem);
+  }
+
+  .st0__pre {
+    letter-spacing: 0.22em;
+    margin-bottom: 1.4rem;
+  }
+
+  .st0__burst {
+    width: min(88vw, 320px);
+    height: min(88vw, 320px);
+    margin-top: -0.4rem;
+  }
+
+  .h0b {
+    line-height: 1;
+  }
+
+  .st0__sub {
+    margin-top: 1.45rem;
+    font-size: 1rem;
+  }
+
+  .st0__sig {
+    margin-top: 1rem;
+  }
+
+  .bk0 {
+    width: min(100%, 14rem);
+  }
+
+  .applause-ring {
+    --applause-r: min(44vw, 170px);
+    top: 38%;
+  }
+}
+
 @keyframes riseIn {
   to {
     opacity: 1;
