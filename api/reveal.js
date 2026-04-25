@@ -5,11 +5,12 @@
  * POST -> update target (no auth; hidden admin URL workflow)
  *
  * Table: public.reveal_config
- * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Env: DATABASE_URL
  */
 
 var DEFAULT_GENDER = "girl";
 var ROW_ID = "main";
+var db = require("./_db");
 
 function send(res, status, payload) {
   if (typeof res.status === "function") {
@@ -69,24 +70,12 @@ function readStreamJson(req) {
   });
 }
 
-async function fetchConfig(supabaseUrl, serviceKey) {
-  var url =
-    supabaseUrl.replace(/\/$/, "") +
-    "/rest/v1/reveal_config?select=id,reveal_gender,updated_at&id=eq." +
-    encodeURIComponent(ROW_ID) +
-    "&limit=1";
-  var res = await fetch(url, {
-    headers: {
-      apikey: serviceKey,
-      Authorization: "Bearer " + serviceKey,
-    },
-  });
-  if (!res.ok) {
-    var t = await res.text();
-    throw new Error("select failed: " + res.status + " " + t.slice(0, 260));
-  }
-  var rows = await res.json();
-  var row = rows && rows[0] ? rows[0] : null;
+async function fetchConfig() {
+  var r = await db.query(
+    "select reveal_gender, updated_at from public.reveal_config where id = $1 limit 1",
+    [ROW_ID]
+  );
+  var row = r.rows && r.rows[0] ? r.rows[0] : null;
   var gender = normalizeGender(row && row.reveal_gender) || DEFAULT_GENDER;
   return {
     id: ROW_ID,
@@ -95,29 +84,12 @@ async function fetchConfig(supabaseUrl, serviceKey) {
   };
 }
 
-async function saveConfig(supabaseUrl, serviceKey, gender) {
-  var url =
-    supabaseUrl.replace(/\/$/, "") +
-    "/rest/v1/reveal_config?on_conflict=id&select=id,reveal_gender,updated_at";
-  var res = await fetch(url, {
-    method: "POST",
-    headers: {
-      apikey: serviceKey,
-      Authorization: "Bearer " + serviceKey,
-      "Content-Type": "application/json",
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify({
-      id: ROW_ID,
-      reveal_gender: gender,
-    }),
-  });
-  if (!res.ok) {
-    var t = await res.text();
-    throw new Error("upsert failed: " + res.status + " " + t.slice(0, 260));
-  }
-  var rows = await res.json();
-  var row = rows && rows[0] ? rows[0] : null;
+async function saveConfig(gender) {
+  var r = await db.query(
+    "insert into public.reveal_config (id, reveal_gender) values ($1, $2) on conflict (id) do update set reveal_gender = excluded.reveal_gender, updated_at = now() returning reveal_gender, updated_at",
+    [ROW_ID, gender]
+  );
+  var row = r.rows && r.rows[0] ? r.rows[0] : null;
   return {
     id: ROW_ID,
     gender: normalizeGender(row && row.reveal_gender) || gender,
@@ -140,17 +112,15 @@ module.exports = async function handler(req, res) {
     return send(res, 405, { error: "Method not allowed" });
   }
 
-  var supabaseUrl = process.env.SUPABASE_URL;
-  var serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
+  if (!process.env.DATABASE_URL) {
     return send(res, 503, {
-      error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      error: "Missing DATABASE_URL",
     });
   }
 
   try {
     if (req.method === "GET") {
-      var current = await fetchConfig(supabaseUrl, serviceKey);
+      var current = await fetchConfig();
       return send(res, 200, current);
     }
 
@@ -164,13 +134,12 @@ module.exports = async function handler(req, res) {
       return send(res, 400, { error: "Need gender: boy or girl" });
     }
 
-    var saved = await saveConfig(supabaseUrl, serviceKey, gender);
+    var saved = await saveConfig(gender);
     return send(res, 200, saved);
   } catch (err) {
     console.error(err);
     return send(res, 502, {
-      error:
-        "Reveal config failed — create public.reveal_config (see supabase/schema.sql).",
+      error: "Reveal config failed — create public.reveal_config in Neon.",
       detail: String(err && err.message ? err.message : err).slice(0, 400),
     });
   }

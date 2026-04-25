@@ -1,5 +1,7 @@
--- Supabase → SQL Editor → Run once (new project).
--- Vercel env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Supabase integration can set these).
+-- Postgres schema (Neon or Supabase) — run once in your SQL editor.
+-- Vercel env should now use DATABASE_URL for API routes.
+
+create extension if not exists pgcrypto;
 
 -- One row per vote: the person's name and whether they picked boy or girl.
 create table if not exists public.votes (

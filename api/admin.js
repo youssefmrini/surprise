@@ -1,10 +1,11 @@
 /**
  * Admin JSON: votes + quiz guesses (newest first).
  * No client secret — rely on obscure URL only (not for sensitive data).
- * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Env: DATABASE_URL
  */
 
 var LIMIT = 500;
+var db = require("./_db");
 
 function send(res, status, payload) {
   if (typeof res.status === "function") {
@@ -15,44 +16,28 @@ function send(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
-async function fetchRows(supabaseUrl, serviceKey, table, columns) {
-  var url =
-    supabaseUrl.replace(/\/$/, "") +
-    "/rest/v1/" +
-    table +
-    "?select=" +
-    columns +
-    "&order=created_at.desc&limit=" +
-    LIMIT;
-  var res = await fetch(url, {
-    headers: {
-      apikey: serviceKey,
-      Authorization: "Bearer " + serviceKey,
-    },
-  });
-  if (!res.ok) {
-    var t = await res.text();
-    throw new Error(table + " " + res.status + " " + t.slice(0, 200));
-  }
-  return res.json();
+async function fetchVotes() {
+  var r = await db.query(
+    "select name, gender, created_at from public.votes order by created_at desc limit $1",
+    [LIMIT]
+  );
+  return r.rows;
 }
 
-async function fetchRevealConfig(supabaseUrl, serviceKey) {
-  var url =
-    supabaseUrl.replace(/\/$/, "") +
-    "/rest/v1/reveal_config?select=id,reveal_gender,updated_at&id=eq.main&limit=1";
-  var res = await fetch(url, {
-    headers: {
-      apikey: serviceKey,
-      Authorization: "Bearer " + serviceKey,
-    },
-  });
-  if (!res.ok) {
-    var t = await res.text();
-    throw new Error("reveal_config " + res.status + " " + t.slice(0, 200));
-  }
-  var rows = await res.json();
-  var row = rows && rows[0] ? rows[0] : null;
+async function fetchGuesses() {
+  var r = await db.query(
+    "select text, passed, created_at from public.quiz_guesses order by created_at desc limit $1",
+    [LIMIT]
+  );
+  return r.rows;
+}
+
+async function fetchRevealConfig() {
+  var r = await db.query(
+    "select reveal_gender, updated_at from public.reveal_config where id = $1 limit 1",
+    ["main"]
+  );
+  var row = r.rows && r.rows[0] ? r.rows[0] : null;
   return {
     gender:
       row && (row.reveal_gender === "girl" || row.reveal_gender === "boy")
@@ -77,11 +62,9 @@ module.exports = async function handler(req, res) {
     return send(res, 405, { error: "Method not allowed" });
   }
 
-  var supabaseUrl = process.env.SUPABASE_URL;
-  var serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
+  if (!process.env.DATABASE_URL) {
     return send(res, 503, {
-      error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      error: "Missing DATABASE_URL",
     });
   }
 
@@ -90,29 +73,19 @@ module.exports = async function handler(req, res) {
     var guesses;
     var reveal;
     try {
-      votes = await fetchRows(
-        supabaseUrl,
-        serviceKey,
-        "votes",
-        "name,gender,created_at"
-      );
+      votes = await fetchVotes();
     } catch (vErr) {
       console.error(vErr);
       votes = [];
     }
     try {
-      guesses = await fetchRows(
-        supabaseUrl,
-        serviceKey,
-        "quiz_guesses",
-        "text,passed,created_at"
-      );
+      guesses = await fetchGuesses();
     } catch (gErr) {
       console.error(gErr);
       guesses = [];
     }
     try {
-      reveal = await fetchRevealConfig(supabaseUrl, serviceKey);
+      reveal = await fetchRevealConfig();
     } catch (rErr) {
       console.error(rErr);
       reveal = { gender: "girl", updated_at: null };

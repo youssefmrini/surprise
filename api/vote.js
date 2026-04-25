@@ -1,67 +1,33 @@
 /**
- * Vercel serverless — no npm deps: Supabase Postgres via REST (fetch only).
+ * Vercel serverless vote API backed by Neon Postgres.
  *
  * Table: public.votes
  *   name    text   — voter’s name
  *   gender  text   — 'boy' or 'girl'
  *
- * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * Schema: supabase/schema.sql (run in Supabase SQL Editor)
+ * Env: DATABASE_URL
  */
 
-var TABLE = "votes";
+var db = require("./_db");
 
-async function countForGender(supabaseUrl, serviceKey, gender) {
-  var url =
-    supabaseUrl.replace(/\/$/, "") +
-    "/rest/v1/" +
-    TABLE +
-    "?gender=eq." +
-    encodeURIComponent(gender) +
-    "&select=id";
-  var res = await fetch(url, {
-    method: "HEAD",
-    headers: {
-      apikey: serviceKey,
-      Authorization: "Bearer " + serviceKey,
-      Prefer: "count=exact",
-    },
+async function getCounts() {
+  var r = await db.query(
+    "select gender, count(*)::int as n from public.votes group by gender"
+  );
+  var boy = 0;
+  var girl = 0;
+  r.rows.forEach(function (row) {
+    if (row.gender === "boy") boy = Number(row.n) || 0;
+    if (row.gender === "girl") girl = Number(row.n) || 0;
   });
-  if (!res.ok) {
-    var t = await res.text();
-    throw new Error("count failed: " + res.status + " " + t);
-  }
-  var cr = res.headers.get("content-range") || "";
-  var m = cr.match(/\/(\d+)\s*$/);
-  var n = m ? parseInt(m[1], 10) : 0;
-  return isNaN(n) ? 0 : n;
-}
-
-async function getCounts(supabaseUrl, serviceKey) {
-  var boy = await countForGender(supabaseUrl, serviceKey, "boy");
-  var girl = await countForGender(supabaseUrl, serviceKey, "girl");
   return { boy: boy, girl: girl, total: boy + girl };
 }
 
-async function insertVote(supabaseUrl, serviceKey, name, gender) {
-  var url = supabaseUrl.replace(/\/$/, "") + "/rest/v1/" + TABLE;
-  var res = await fetch(url, {
-    method: "POST",
-    headers: {
-      apikey: serviceKey,
-      Authorization: "Bearer " + serviceKey,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      name: name,
-      gender: gender,
-    }),
-  });
-  if (!res.ok) {
-    var t = await res.text();
-    throw new Error("insert failed: " + res.status + " " + t);
-  }
+async function insertVote(name, gender) {
+  await db.query("insert into public.votes (name, gender) values ($1, $2)", [
+    name,
+    gender,
+  ]);
 }
 
 function send(res, status, payload) {
@@ -152,17 +118,15 @@ module.exports = async function handler(req, res) {
     return res.end();
   }
 
-  var supabaseUrl = process.env.SUPABASE_URL;
-  var serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
+  if (!process.env.DATABASE_URL) {
     return send(res, 503, {
-      error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      error: "Missing DATABASE_URL",
     });
   }
 
   try {
     if (req.method === "GET") {
-      var c = await getCounts(supabaseUrl, serviceKey);
+      var c = await getCounts();
       return send(res, 200, c);
     }
 
@@ -181,7 +145,7 @@ module.exports = async function handler(req, res) {
       }
 
       try {
-        await insertVote(supabaseUrl, serviceKey, parsed.name, parsed.gender);
+        await insertVote(parsed.name, parsed.gender);
       } catch (insErr) {
         console.error(insErr);
         var detail = String(insErr && insErr.message ? insErr.message : insErr).slice(
@@ -189,11 +153,11 @@ module.exports = async function handler(req, res) {
           400
         );
         return send(res, 502, {
-          error: "Database write failed — check Supabase table public.votes (columns name, gender).",
+          error: "Database write failed — check Neon table public.votes (columns name, gender).",
           detail: detail,
         });
       }
-      var c2 = await getCounts(supabaseUrl, serviceKey);
+      var c2 = await getCounts();
       return send(res, 201, c2);
     }
 

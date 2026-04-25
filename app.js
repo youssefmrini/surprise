@@ -535,9 +535,13 @@
     }
     if (res && res.status === 503 && res.data && res.data.error) {
       var er = String(res.data.error);
-      if (er.indexOf("SUPABASE") !== -1) {
+      if (
+        er.indexOf("DATABASE_URL") !== -1 ||
+        er.indexOf("Neon") !== -1 ||
+        er.indexOf("database") !== -1
+      ) {
         return revealDebugOn()
-          ? "Vercel: add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (Settings → Environment Variables), redeploy."
+          ? "Vercel: add DATABASE_URL (Neon connection string) in Environment Variables, then redeploy."
           : "Shared scoreboard isn’t on yet — you’ll only see counts saved on this device.";
       }
       return revealDebugOn()
@@ -814,13 +818,13 @@
                 err &&
                 err.status === 503 &&
                 err.data &&
-                String(err.data.error || "").indexOf("SUPABASE") !== -1
+                String(err.data.error || "").indexOf("DATABASE_URL") !== -1
               ) {
                 extra =
-                  " Host: set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY on Vercel, redeploy.";
+                  " Host: set DATABASE_URL on Vercel, redeploy.";
               } else if (err && err.status === 502) {
                 extra =
-                  " Host: Supabase table public.votes must have columns name + gender (run supabase/schema.sql).";
+                  " Host: create public.votes/public.quiz_guesses/public.reveal_config in Neon (run supabase/schema.sql).";
               } else if (err && err.status === 400) {
                 extra = " Try again, or open with ?debug=1 for details.";
               }

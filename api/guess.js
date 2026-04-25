@@ -2,8 +2,10 @@
  * Log quiz gate submissions (every guess, pass or fail).
  *
  * Table: public.quiz_guesses — text, passed, created_at (default now())
- * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Env: DATABASE_URL
  */
+
+var db = require("./_db");
 
 function send(res, status, payload) {
   if (typeof res.status === "function") {
@@ -59,25 +61,11 @@ function readStreamJson(req) {
   });
 }
 
-async function insertGuess(supabaseUrl, serviceKey, text, passed) {
-  var url = supabaseUrl.replace(/\/$/, "") + "/rest/v1/quiz_guesses";
-  var res = await fetch(url, {
-    method: "POST",
-    headers: {
-      apikey: serviceKey,
-      Authorization: "Bearer " + serviceKey,
-      "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      text: text,
-      passed: !!passed,
-    }),
-  });
-  if (!res.ok) {
-    var t = await res.text();
-    throw new Error("insert failed: " + res.status + " " + t);
-  }
+async function insertGuess(text, passed) {
+  await db.query(
+    "insert into public.quiz_guesses (text, passed) values ($1, $2)",
+    [text, !!passed]
+  );
 }
 
 module.exports = async function handler(req, res) {
@@ -95,11 +83,9 @@ module.exports = async function handler(req, res) {
     return send(res, 405, { error: "Method not allowed" });
   }
 
-  var supabaseUrl = process.env.SUPABASE_URL;
-  var serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
+  if (!process.env.DATABASE_URL) {
     return send(res, 503, {
-      error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      error: "Missing DATABASE_URL",
     });
   }
 
@@ -131,7 +117,7 @@ module.exports = async function handler(req, res) {
       body.unlocked === true;
 
     try {
-      await insertGuess(supabaseUrl, serviceKey, raw, passed);
+      await insertGuess(raw, passed);
     } catch (insErr) {
       console.error(insErr);
       var detail = String(
@@ -139,7 +125,7 @@ module.exports = async function handler(req, res) {
       ).slice(0, 400);
       return send(res, 502, {
         error:
-          "Database write failed — create public.quiz_guesses (see supabase/schema.sql).",
+          "Database write failed — create public.quiz_guesses in Neon.",
         detail: detail,
       });
     }
