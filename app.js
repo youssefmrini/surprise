@@ -926,7 +926,7 @@
     if (els.dateLabel) {
       els.dateLabel.textContent =
         "Counting down to " +
-        TARGET.toLocaleString(undefined, {
+        TARGET.toLocaleString("en-US", {
           weekday: "long",
           month: "long",
           day: "numeric",
