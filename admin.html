@@ -99,7 +99,11 @@
         }
 
         function fetchJson(url, init) {
-          return fetch(url, init || { method: "GET" }).then(function (r) {
+          var base = { credentials: "include" };
+          var merged = init
+            ? Object.assign(base, init)
+            : Object.assign({ method: "GET" }, base);
+          return fetch(url, merged).then(function (r) {
             return r.text().then(function (text) {
               var data = null;
               try {
@@ -117,7 +121,7 @@
           try {
             var d = new Date(iso);
             if (isNaN(d.getTime())) return iso;
-            return d.toLocaleString(undefined, {
+            return d.toLocaleString("en-US", {
               dateStyle: "medium",
               timeStyle: "short",
             });
